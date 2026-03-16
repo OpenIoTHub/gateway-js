@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = ".;pb";
+
+import "google/protobuf/empty.proto";
+
+message Token {
+  string Value = 1;
+}
+
+message LoginResponse {
+  int32 Code = 1;
+  string Message = 2;
+  bool LoginStatus = 3;
+}
+
+service GatewayLoginManager {
+  rpc CheckGatewayLoginStatus (google.protobuf.Empty) returns (LoginResponse) {}
+  rpc LoginServerByToken (Token) returns (LoginResponse) {}
+}

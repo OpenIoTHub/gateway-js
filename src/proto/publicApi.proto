@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = ".;pb";
+
+import "google/protobuf/empty.proto";
+
+message JwtQRCodePair {
+  string GatewayJwt = 1;
+  string QRCodeForMobileAdd = 2;
+}
+
+service PublicApi {
+  rpc GenerateJwtQRCodePair (google.protobuf.Empty) returns (JwtQRCodePair) {}
+}

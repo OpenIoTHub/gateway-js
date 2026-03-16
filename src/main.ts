@@ -17,6 +17,14 @@ const commit = '';
 const date = '';
 const builtBy = '';
 
+process.on('uncaughtException', (err) => {
+  console.error('未捕获异常:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('未处理的 Promise rejection:', reason);
+});
+
 async function main() {
   setIsLibrary(false);
 

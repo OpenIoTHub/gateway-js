@@ -4,30 +4,21 @@
 
 ---
 
-## 1. P2P / KCP 连接
+## ~~1. P2P / KCP 连接~~ ✅ 已实现
 
-**优先级**：高  
-**涉及文件**：`src/netservice/handle/handle.ts` (行 106-127)
+**状态**：已完成
 
-Go 版通过 `github.com/OpenIoTHub/utils/v2/net/p2p/gateway` 实现了基于 KCP 协议的 P2P 打洞连接，包括：
+基于 `kcpjs`（与 Go 版 `xtaci/kcp-go` wire-compatible 的纯 JS KCP 实现）完成了 P2P 打洞连接：
 
 - `ReqNewP2PCtrlAsServer`：作为 listener 方式从 UDP 洞中获取 KCP 连接
 - `ReqNewP2PCtrlAsClient`：作为 dial 方式创建 KCP 连接
 
-当前 JS 版仅打印日志并关闭连接：
+**涉及文件**：
 
-```typescript
-case 'models.ReqNewP2PCtrlAsServer':
-  console.log('P2P server session not yet implemented in JS version');
-  stream.destroy();
-  break;
-```
-
-**实现建议**：
-
-- 调研 Node.js 的 KCP 实现（如 `node-kcp` 或自行基于 UDP 实现）
-- 需要实现 UDP 打洞协商（STUN/TURN 或自定义协议）
-- 在打洞成功后建立 yamux session 进行复用
+- `src/utils/p2p/udpUtils.ts` — UDP 打洞工具（获取外网地址、发送打洞包）
+- `src/utils/p2p/kcpDuplex.ts` — KCP 到 Node.js Duplex 流适配器
+- `src/utils/p2p/gateway.ts` — P2P 会话管理（Server/Client 两种模式）
+- `src/netservice/handle/handle.ts` — 消息分发接入
 
 ---
 

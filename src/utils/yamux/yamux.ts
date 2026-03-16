@@ -122,10 +122,15 @@ export class YamuxStream extends Duplex {
 
   _write(chunk: Buffer, _encoding: string, callback: (error?: Error | null) => void): void {
     if (this._closed || this._rstReceived) {
-      callback(new Error('stream is closed'));
+      callback();
       return;
     }
-    this.writeData(chunk).then(() => callback()).catch(callback);
+    this.writeData(chunk).then(() => callback()).catch(() => {
+      if (!this._closed) {
+        this.destroy();
+      }
+      callback();
+    });
   }
 
   private async writeData(data: Buffer): Promise<void> {
@@ -157,15 +162,14 @@ export class YamuxStream extends Duplex {
       this.session
         .writeFrame(MsgType.Data, Flag.FIN, this.streamID, Buffer.alloc(0))
         .then(() => callback())
-        .catch(callback);
+        .catch(() => callback());
     } else {
       callback();
     }
   }
 
-  _destroy(error: Error | null, callback: (error: Error | null) => void): void {
+  _destroy(_error: Error | null, callback: (error: Error | null) => void): void {
     this._closed = true;
-    // Reject all pending write waiters so they don't hang forever
     for (const r of this.sendResolvers) {
       r.resolve();
     }
@@ -181,7 +185,7 @@ export class YamuxStream extends Duplex {
       this.readWaiting = null;
       cb();
     }
-    callback(error);
+    callback(null);
   }
 
   handleData(data: Buffer, flags: number): void {
@@ -355,7 +359,9 @@ export class YamuxSession extends EventEmitter {
   }
 
   private handleError(err: Error): void {
-    this.emit('error', err);
+    if (!this._closed) {
+      console.log(`yamux 连接错误: ${err.message}`);
+    }
     this.handleClose();
   }
 
@@ -388,19 +394,32 @@ export class YamuxSession extends EventEmitter {
     data: Buffer,
     lengthOverride?: number,
   ): Promise<void> {
+    if (this._closed || this.conn.destroyed || this.conn.writableEnded || !this.conn.writable) {
+      return;
+    }
     const prev = this.writeLock;
     let resolveLock!: () => void;
     this.writeLock = new Promise<void>((r) => (resolveLock = r));
     await prev;
     try {
+      if (this._closed || this.conn.destroyed || this.conn.writableEnded || !this.conn.writable) {
+        return;
+      }
       const length = lengthOverride !== undefined ? lengthOverride : data.length;
       const header = encodeHeader(type, flags, streamID, length);
       const frame = data.length > 0 ? Buffer.concat([header, data]) : header;
-      await new Promise<void>((resolve, reject) => {
-        this.conn.write(frame, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
+      await new Promise<void>((resolve) => {
+        try {
+          this.conn.write(frame, (err) => {
+            if (err) {
+              this.handleClose();
+            }
+            resolve();
+          });
+        } catch {
+          this.handleClose();
+          resolve();
+        }
       });
     } finally {
       resolveLock();
@@ -456,7 +475,11 @@ export class YamuxSession extends EventEmitter {
       await this.writeFrame(MsgType.GoAway, 0, 0, Buffer.alloc(0), code);
     } catch {}
     this.closeAllStreams();
-    this.conn.end();
+    try {
+      if (!this.conn.destroyed) {
+        this.conn.destroy();
+      }
+    } catch {}
   }
 
   removeStream(id: number): void {

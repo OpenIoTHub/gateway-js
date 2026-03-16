@@ -120,3 +120,22 @@ export async function writeMsg(stream: WritableStream, msg: Message & { _typeNam
 export function createTypedMessage<T extends Message>(typeName: string, data: T): T & { _typeName: string } {
   return { ...data, _typeName: typeName };
 }
+
+export function readMsgWithTimeout(
+  stream: ReadableStream,
+  timeoutMs: number,
+): Promise<{ type: string; msg: Message }> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error(`readMsg timeout after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+    readMsg(stream).then(
+      (result) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } },
+      (err) => { if (!settled) { settled = true; clearTimeout(timer); reject(err); } },
+    );
+  });
+}

@@ -141,6 +141,12 @@ export interface DeleteGatewayJwt extends Message {}
 
 export interface GetMyUDPPublicAddr extends Message {}
 
+export interface UDPAddr extends Message {
+  IP: string;
+  Port: number;
+  Zone: string;
+}
+
 // TypeMap: Go type string -> constructor (for deserialization)
 // Go reflect produces "models.XXX" as the type string
 export const TypeMap: Record<string, string> = {

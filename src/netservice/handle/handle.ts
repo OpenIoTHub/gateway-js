@@ -23,7 +23,13 @@ import {
   CheckStatusRequest,
   CheckStatusResponse,
   TokenClaims,
+  ReqNewP2PCtrlAsServer,
+  ReqNewP2PCtrlAsClient,
 } from '../../models/models';
+import {
+  makeP2PSessionAsServer,
+  makeP2PSessionAsClient,
+} from '../../utils/p2p/gateway';
 
 export async function handleStream(stream: Duplex, tokenStr: string): Promise<void> {
   try {
@@ -110,9 +116,21 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
           stream.destroy();
           return;
         }
-        // P2P/KCP in Node.js is complex, log and skip
-        console.log('P2P server session not yet implemented in JS version');
-        stream.destroy();
+        const serverMsg = msg as ReqNewP2PCtrlAsServer;
+        (async () => {
+          try {
+            const { session: p2pSession, kcpListener, kcpDuplex } =
+              await makeP2PSessionAsServer(stream, serverMsg, tokenModel);
+            try {
+              await handleSession(p2pSession, tokenStr);
+            } finally {
+              kcpDuplex.destroy();
+              kcpListener.close();
+            }
+          } catch (err) {
+            console.error(`创建P2P服务器会话失败: ${err}`);
+          }
+        })();
         break;
       }
       case 'models.ReqNewP2PCtrlAsClient': {
@@ -122,8 +140,21 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
           stream.destroy();
           return;
         }
-        console.log('P2P client session not yet implemented in JS version');
-        stream.destroy();
+        const clientMsg = msg as ReqNewP2PCtrlAsClient;
+        (async () => {
+          try {
+            const { session: p2pSession, udpSocket, kcpDuplex } =
+              await makeP2PSessionAsClient(stream, clientMsg, tokenModel);
+            try {
+              await handleSession(p2pSession, tokenStr);
+            } finally {
+              kcpDuplex.destroy();
+              udpSocket.close();
+            }
+          } catch (err) {
+            console.error(`创建P2P客户端会话失败: ${err}`);
+          }
+        })();
         break;
       }
       case 'models.CheckStatusRequest': {

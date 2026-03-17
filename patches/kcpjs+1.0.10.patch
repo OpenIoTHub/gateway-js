@@ -1,0 +1,28 @@
+diff --git a/node_modules/kcpjs/dist/kcp.js b/node_modules/kcpjs/dist/kcp.js
+index 00dbe2d..e782aea 100644
+--- a/node_modules/kcpjs/dist/kcp.js
++++ b/node_modules/kcpjs/dist/kcp.js
+@@ -545,15 +545,19 @@ class Kcp {
+                     if (buffer.byteLength < capacity) {
+                         extend = buffer.byteLength;
+                     }
+-                    // grow slice, the underlying cap is guaranteed to
+-                    // be larger than kcp.mss
++                    // grow buffer (Buffer.slice cannot extend in Node.js unlike Go slices)
+                     const oldlen = seg.data.byteLength;
+-                    seg.data = seg.data.slice(0, oldlen + extend);
+-                    buffer.copy(seg.data, oldlen);
++                    const newData = Buffer.alloc(oldlen + extend);
++                    seg.data.copy(newData, 0, 0, oldlen);
++                    buffer.copy(newData, oldlen, 0, extend);
++                    seg.data = newData;
+                     buffer = buffer.slice(extend);
+                 }
+             }
+         }
++        if (buffer.byteLength === 0) {
++            return 0;
++        }
+         if (buffer.byteLength <= this.mss) {
+             count = 1;
+         }

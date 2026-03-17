@@ -42,14 +42,20 @@ export class KcpDuplex extends Duplex {
   }
 
   _write(chunk: Buffer, _encoding: string, callback: (error?: Error | null) => void): void {
-    if (this._kcpClosed) {
+    if (this._kcpClosed || !(this.session as any).kcp) {
       callback(new Error('KCP session is closed'));
+      return;
+    }
+    if (!Buffer.isBuffer(chunk) || chunk.length === 0) {
+      callback();
       return;
     }
     try {
       this.session.write(chunk);
       callback();
     } catch (err) {
+      this._kcpClosed = true;
+      (this.session as any).kcp = null;
       callback(err as Error);
     }
   }
@@ -57,7 +63,11 @@ export class KcpDuplex extends Duplex {
   _destroy(error: Error | null, callback: (error: Error | null) => void): void {
     if (!this._kcpClosed) {
       this._kcpClosed = true;
-      try { this.session.close(); } catch {}
+      try {
+        this.session.close();
+      } catch { /* ignore close errors */ }
+      // Null out kcp so the check() timer loop stops on next tick
+      (this.session as any).kcp = null;
     }
     callback(error);
   }

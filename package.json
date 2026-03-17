@@ -7,6 +7,7 @@
     "gateway-js": "dist/main.js"
   },
   "scripts": {
+    "postinstall": "patch-package",
     "build": "tsc && cp -r src/proto dist/proto",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts"
@@ -45,6 +46,7 @@
     "@types/ssh2": "^1.15.4",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
+    "patch-package": "^8.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }

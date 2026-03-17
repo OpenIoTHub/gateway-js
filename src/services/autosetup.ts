@@ -66,9 +66,18 @@ export async function autoLoginAndDisplayQRCode(): Promise<void> {
 async function autoLoginViaHTTP(): Promise<void> {
   try {
     const https = await import('https');
+    const url = new URL('https://api.iot-manager.iothub.cloud/v1/generateJwtQRCodePair');
     const result = await new Promise<any>((resolve, reject) => {
-      https.get(
-        'https://api.iot-manager.iothub.cloud/v1/generateJwtQRCodePair',
+      const req = https.request(
+        {
+          hostname: url.hostname,
+          path: url.pathname,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        },
         (res) => {
           let data = '';
           res.on('data', (chunk: string) => (data += chunk));
@@ -76,11 +85,14 @@ async function autoLoginViaHTTP(): Promise<void> {
             try {
               resolve(JSON.parse(data));
             } catch (e) {
-              reject(e);
+              reject(new Error(`服务器返回非JSON内容: ${data.substring(0, 200)}`));
             }
           });
         },
-      ).on('error', reject);
+      );
+      req.on('error', reject);
+      req.write('{}');
+      req.end();
     });
 
     if (result.GatewayJwt) {

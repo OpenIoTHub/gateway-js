@@ -28,6 +28,14 @@ export class GatewayCtl {
     this.serverSessions.delete(runId);
   }
 
+  /** 用于 IPv6 入站等无上层会话上下文的场景；多账号登录时取任意一个已登录 JWT */
+  getAnyLoginToken(): string | null {
+    for (const s of this.serverSessions.values()) {
+      return s.token;
+    }
+    return null;
+  }
+
   getLoginInfo(): { gatewayUUID: string; serverHost: string } {
     if (this.serverSessions.size === 0) {
       throw new Error('not logged in');

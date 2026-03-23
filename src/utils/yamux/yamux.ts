@@ -385,6 +385,7 @@ export class YamuxSession extends EventEmitter {
       resolver(null);
     }
     this.acceptResolvers = [];
+    this.acceptQueue = [];
   }
 
   async writeFrame(
@@ -426,19 +427,19 @@ export class YamuxSession extends EventEmitter {
     }
   }
 
-  async acceptStream(): Promise<YamuxStream> {
-    if (this._closed) throw new Error('session is closed');
+  /** 会话已关闭或连接结束时返回 null，便于调用方正常退出循环（与 go-yamux Accept 的 err 语义一致）。 */
+  async acceptStream(): Promise<YamuxStream | null> {
+    if (this._closed) return null;
     if (this.acceptQueue.length > 0) {
       return this.acceptQueue.shift()!;
     }
-    return new Promise<YamuxStream>((resolve, reject) => {
+    return new Promise<YamuxStream | null>((resolve) => {
       if (this._closed) {
-        reject(new Error('session is closed'));
+        resolve(null);
         return;
       }
       this.acceptResolvers.push((stream) => {
-        if (!stream) reject(new Error('session is closed'));
-        else resolve(stream);
+        resolve(stream);
       });
     });
   }

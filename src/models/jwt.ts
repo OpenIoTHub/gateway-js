@@ -14,7 +14,8 @@ export function decodeUnverifiedToken(tokenStr: string): TokenClaims {
     KcpPort: payload.KcpPort ?? 0,
     TlsPort: payload.TlsPort ?? 0,
     GrpcPort: payload.GrpcPort ?? 0,
-    UDPApiPort: payload.UDPApiPort ?? 0,
+    UDPApiPort:
+      payload.UDPApiPort ?? payload.udpApiPort ?? payload.UdpApiPort ?? 0,
     KCPApiPort: payload.KCPApiPort ?? 0,
     Permission: payload.Permission ?? [],
     Txts: payload.Txts ?? {},
@@ -33,7 +34,8 @@ export function decodeToken(salt: string, tokenStr: string): TokenClaims {
     KcpPort: decoded.KcpPort ?? 0,
     TlsPort: decoded.TlsPort ?? 0,
     GrpcPort: decoded.GrpcPort ?? 0,
-    UDPApiPort: decoded.UDPApiPort ?? 0,
+    UDPApiPort:
+      decoded.UDPApiPort ?? decoded.udpApiPort ?? decoded.UdpApiPort ?? 0,
     KCPApiPort: decoded.KCPApiPort ?? 0,
     Permission: decoded.Permission ?? [],
     Txts: decoded.Txts ?? {},

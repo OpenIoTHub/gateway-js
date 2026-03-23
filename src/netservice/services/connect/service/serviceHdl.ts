@@ -7,7 +7,11 @@ import { listenMulticastUDP } from './listenMulticastUDP';
 import { getSystemStatus } from './systemStatus';
 import { getIPv6Addr } from './getIPv6Addr';
 
-export async function serviceHdl(stream: Duplex, service: NewService): Promise<void> {
+export async function serviceHdl(
+  stream: Duplex,
+  service: NewService,
+  tokenStr: string,
+): Promise<void> {
   switch (service.Type) {
     case 'tap':
     case 'tun':
@@ -34,7 +38,7 @@ export async function serviceHdl(stream: Duplex, service: NewService): Promise<v
       await getSystemStatus(stream, service);
       break;
     case 'GetIPv6Addr':
-      await getIPv6Addr(stream, service);
+      await getIPv6Addr(stream, service, tokenStr);
       break;
     default: {
       const response = createTypedMessage<JsonResponse>('JsonResponse', {

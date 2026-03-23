@@ -33,13 +33,18 @@ import {
 
 export async function handleStream(stream: Duplex, tokenStr: string): Promise<void> {
   try {
-    let tokenModel: TokenClaims | null = null;
-    if (tokenStr) {
+    if (!tokenStr) {
+      console.error('handleStream: 缺少网关 token（不得为空字符串）');
       try {
-        tokenModel = decodeUnverifiedToken(tokenStr);
-      } catch (err) {
-        console.error(`解析token失败: ${err}`);
-      }
+        stream.destroy();
+      } catch {}
+      return;
+    }
+    let tokenModel: TokenClaims | null = null;
+    try {
+      tokenModel = decodeUnverifiedToken(tokenStr);
+    } catch (err) {
+      console.error(`解析token失败: ${err}`);
     }
 
     const { type, msg } = await readMsg(stream);
@@ -89,7 +94,7 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
       }
       case 'models.NewService': {
         const m = msg as NewService;
-        await serviceHdl(stream, m);
+        await serviceHdl(stream, m, tokenStr);
         break;
       }
       case 'models.NewSubSession': {
@@ -112,7 +117,7 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
       case 'models.ReqNewP2PCtrlAsServer': {
         console.log('作为listener方式从洞中获取kcp连接');
         if (!tokenModel) {
-          console.log('tokenModel为空，无法创建P2P会话');
+          console.log('tokenModel为空，无法创建P2P会话1');
           stream.destroy();
           return;
         }
@@ -136,7 +141,7 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
       case 'models.ReqNewP2PCtrlAsClient': {
         console.log('作为dial方式从洞中创建kcp连接');
         if (!tokenModel) {
-          console.log('tokenModel为空，无法创建P2P会话');
+          console.log('tokenModel为空，无法创建P2P会话2');
           stream.destroy();
           return;
         }
@@ -188,8 +193,15 @@ export async function handleStream(stream: Duplex, tokenStr: string): Promise<vo
 }
 
 export async function handleSession(session: YamuxSession, tokenStr: string): Promise<void> {
+  if (!tokenStr) {
+    console.error('handleSession: 缺少网关 token（不得为空字符串）');
+    try {
+      await session.close();
+    } catch {}
+    return;
+  }
   try {
-    while (!session.isClosed()) {
+    while (true) {
       const stream = await session.acceptStream();
       if (!stream) break;
       handleStream(stream, tokenStr).catch((err) => {

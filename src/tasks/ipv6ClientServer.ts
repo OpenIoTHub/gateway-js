@@ -1,6 +1,7 @@
 import net from 'net';
 import { clientTaskChan } from '../chans/chans';
 import { setIpv6ListenTcpHandlePort } from '../config/config';
+import { gatewayManager } from '../services/gatewayManager';
 import { handleSession } from '../netservice/handle/handle';
 import { writeMsg, readMsg, createTypedMessage } from '../utils/msg/process';
 import { JsonResponse } from '../models/models';
@@ -12,7 +13,15 @@ export function ipv6ClientTask(): void {
       try {
         const remoteIpv6Server = await clientTaskChan.receive();
         console.log('====获取到任务');
-        const { Ipv6AddrIp: ip, Ipv6AddrPort: port } = remoteIpv6Server;
+        const {
+          Ipv6AddrIp: ip,
+          Ipv6AddrPort: port,
+          LocalGatewayToken: dialToken,
+        } = remoteIpv6Server;
+        if (!dialToken) {
+          console.error('IPv6 任务缺少 LocalGatewayToken，跳过连接');
+          continue;
+        }
 
         const conn = await new Promise<net.Socket>((resolve, reject) => {
           const sock = net.createConnection({ host: ip, port }, () => resolve(sock));
@@ -30,7 +39,7 @@ export function ipv6ClientTask(): void {
 
         const session = createServerSession(conn);
         console.log('ipv6 p2p client HandleSession');
-        handleSession(session, '').catch((err) => {
+        handleSession(session, dialToken).catch((err) => {
           console.error(`ipv6 p2p client session error: ${err}`);
         });
       } catch (err) {
@@ -59,11 +68,17 @@ export function ipv6ServerTask(): void {
 
 async function ipv6ClientHandle(conn: net.Socket): Promise<void> {
   try {
-    const { msg: rawMsg } = await readMsg(conn);
-    // TODO: 验证token, RunId
+    const { msg: _rawMsg } = await readMsg(conn);
+    // TODO: 校验首包 JsonResponse 中的 RunId 等与对端身份
+    const acceptToken = gatewayManager.getAnyLoginToken();
+    if (!acceptToken) {
+      console.error('IPv6 入站：当前无已登录网关会话，关闭连接');
+      conn.destroy();
+      return;
+    }
     const session = createServerSession(conn);
     console.log(`ipv6 server handle session ${conn.remoteAddress}`);
-    handleSession(session, '').catch((err) => {
+    handleSession(session, acceptToken).catch((err) => {
       console.error(`ipv6 server session error: ${err}`);
     });
   } catch (err) {

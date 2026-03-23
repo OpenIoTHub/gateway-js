@@ -3,23 +3,47 @@
   "version": "1.0.0",
   "description": "OpenIoTHub Gateway - TypeScript/Node.js version",
   "main": "dist/main.js",
+  "types": "dist/main.d.ts",
   "bin": {
     "gateway-js": "dist/main.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "postinstall": "patch-package",
     "build": "tsc && cp -r src/proto dist/proto",
     "start": "node dist/main.js",
-    "dev": "ts-node src/main.ts"
+    "dev": "ts-node src/main.ts",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "iot",
     "gateway",
     "openiothub",
-    "nat"
+    "nat",
+    "nat-traversal",
+    "remote-control"
   ],
   "author": "OpenIoTHub",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenIoTHub/gateway-js.git"
+  },
+  "homepage": "https://github.com/OpenIoTHub",
+  "bugs": {
+    "url": "https://github.com/OpenIoTHub/gateway-js/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.6",
     "@grpc/proto-loader": "^0.7.13",

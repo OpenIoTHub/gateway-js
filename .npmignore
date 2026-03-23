@@ -1,0 +1,10 @@
+src/
+docs/
+patches/
+.github/
+.gitignore
+tsconfig.json
+Dockerfile
+gateway-go.yaml
+*.ts
+!dist/**/*.ts
